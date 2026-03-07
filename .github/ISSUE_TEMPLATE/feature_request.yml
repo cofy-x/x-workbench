@@ -1,0 +1,65 @@
+name: Feature Request
+description: Propose a new capability or improvement for x-workbench.
+title: "[feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Clear context helps us prioritize and implement faster.
+
+  - type: input
+    id: tool
+    attributes:
+      label: Target Tool
+      description: Which tool should this apply to? (or "new tool")
+      placeholder: logo_generator / new tool
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem are you trying to solve?
+      placeholder: Describe the pain point.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution
+      description: Describe the expected behavior and user flow.
+      placeholder: Describe the feature proposal.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other options you've considered.
+      placeholder: Optional.
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Define how we can verify this feature is complete.
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-check
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true

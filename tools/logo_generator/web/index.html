@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brand Logo Generator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #101418;
+      --muted: #5a6472;
+      --line: #d8dee6;
+      --brand: #1f6feb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top right, #edf3ff, var(--bg) 55%);
+      color: var(--text);
+      font-family: "Arial", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    }
+
+    .page {
+      max-width: 1160px;
+      margin: 24px auto 48px;
+      padding: 0 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    .sub {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 360px) 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .action {
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button[disabled] {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .status {
+      min-height: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .output-path {
+      margin: 0 0 16px;
+      padding: 10px 12px;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+
+    .gallery {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    }
+
+    .card {
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .card.dark {
+      background: #0d1117;
+      border-color: #2d333b;
+    }
+
+    .card-head {
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+    }
+
+    .card.dark .card-head {
+      color: #9ca3af;
+      background: #111827;
+      border-bottom-color: #2d333b;
+    }
+
+    .card-body {
+      padding: 10px;
+      min-height: 120px;
+      display: grid;
+      place-items: center;
+    }
+
+    .card img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Brand Logo Generator</h1>
+    <p class="sub">Configure brand options in this page. Generated assets are written to <code>generated/&lt;brand&gt;/</code>.</p>
+
+    <section class="layout">
+      <article class="panel">
+        <form id="config-form" class="form-grid">
+          <label>
+            Brand Name
+            <input id="brand_name" type="text" name="brand_name" placeholder="Avant" required>
+          </label>
+
+          <label>
+            Default Variant
+            <select id="default_variant" name="default_variant"></select>
+          </label>
+
+          <label>
+            Icon Algorithm
+            <select id="icon_mode" name="icon_mode"></select>
+          </label>
+
+          <label>
+            Random Seed (Optional)
+            <input id="random_seed" type="text" name="random_seed" placeholder="Leave empty to use the brand name as seed">
+          </label>
+
+          <label>
+            Custom Font Path (Optional)
+            <input id="custom_font_path" type="text" name="custom_font_path" placeholder="/path/to/font.ttf">
+          </label>
+
+          <label class="checkbox-row">
+            <input id="generate_all_variants" type="checkbox" name="generate_all_variants">
+            Export All Variant Candidates
+          </label>
+
+          <div class="action">
+            <button id="submit-btn" type="submit">Generate Images</button>
+          </div>
+          <div id="status" class="status"></div>
+        </form>
+      </article>
+
+      <article class="panel">
+        <p id="output_dir" class="output-path">Output Directory: Not generated yet</p>
+        <div id="gallery" class="gallery"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("config-form");
+    const statusEl = document.getElementById("status");
+    const outputDirEl = document.getElementById("output_dir");
+    const galleryEl = document.getElementById("gallery");
+    const submitBtn = document.getElementById("submit-btn");
+    const variantSelect = document.getElementById("default_variant");
+    const iconModeSelect = document.getElementById("icon_mode");
+    const randomSeedInput = document.getElementById("random_seed");
+
+    const iconModeLabels = {
+      static_variant: "Static Variant (does not change by brand)",
+      brand_initial: "First-Letter Based",
+      brand_seeded: "First Letter + Brand Seeded (Recommended)"
+    };
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.style.color = isError ? "#d1242f" : "#5a6472";
+    }
+
+    function createImageCard(file) {
+      const card = document.createElement("article");
+      card.className = "card" + (file.name.includes("-dark") ? " dark" : "");
+
+      const head = document.createElement("div");
+      head.className = "card-head";
+      head.textContent = file.name;
+
+      const body = document.createElement("div");
+      body.className = "card-body";
+
+      const img = document.createElement("img");
+      img.alt = file.name;
+      img.src = `${file.url}?t=${Date.now()}`;
+      img.loading = "lazy";
+
+      body.appendChild(img);
+      card.appendChild(head);
+      card.appendChild(body);
+      return card;
+    }
+
+    function renderResult(result) {
+      outputDirEl.textContent = `Output Directory: ${result.output_dir}`;
+      galleryEl.innerHTML = "";
+      result.files.forEach((file) => {
+        galleryEl.appendChild(createImageCard(file));
+      });
+    }
+
+    function syncSeedInputState() {
+      const mode = iconModeSelect.value;
+      const seedEnabled = mode === "brand_seeded";
+      randomSeedInput.disabled = !seedEnabled;
+      if (seedEnabled) {
+        randomSeedInput.placeholder = "Leave empty to use the brand name as seed";
+      } else {
+        randomSeedInput.placeholder = "Only used in brand_seeded mode";
+      }
+    }
+
+    async function loadOptions() {
+      setStatus("Loading configuration...");
+      try {
+        const response = await fetch("/api/options");
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load configuration");
+        }
+
+        document.getElementById("brand_name").value = data.brand_name;
+        document.getElementById("generate_all_variants").checked = data.generate_all_variants;
+
+        variantSelect.innerHTML = "";
+        data.variants.forEach((name) => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          if (name === data.default_variant) {
+            option.selected = true;
+          }
+          variantSelect.appendChild(option);
+        });
+
+        iconModeSelect.innerHTML = "";
+        data.icon_modes.forEach((mode) => {
+          const option = document.createElement("option");
+          option.value = mode;
+          option.textContent = iconModeLabels[mode] || mode;
+          if (mode === data.default_icon_mode) {
+            option.selected = true;
+          }
+          iconModeSelect.appendChild(option);
+        });
+        syncSeedInputState();
+        setStatus("Configuration loaded. Ready to generate.");
+      } catch (error) {
+        setStatus(error.message || "Failed to load configuration.", true);
+      }
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      setStatus("Generating images, please wait...");
+      submitBtn.disabled = true;
+
+      const payload = {
+        brand_name: document.getElementById("brand_name").value.trim(),
+        default_variant: document.getElementById("default_variant").value,
+        icon_mode: document.getElementById("icon_mode").value,
+        random_seed: document.getElementById("random_seed").value.trim(),
+        custom_font_path: document.getElementById("custom_font_path").value.trim(),
+        generate_all_variants: document.getElementById("generate_all_variants").checked
+      };
+
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Generation failed");
+        }
+        renderResult(data.result);
+        setStatus(`Generated ${data.result.files.length} files.`);
+      } catch (error) {
+        setStatus(error.message || "Generation failed.", true);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    iconModeSelect.addEventListener("change", syncSeedInputState);
+
+    loadOptions();
+  </script>
+</body>
+</html>
