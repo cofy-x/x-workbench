@@ -54,9 +54,15 @@ Use the root `Makefile` as the primary interface:
 
 - Backend: `tools/video_kit/app.py`
 - UI: `tools/video_kit/web/index.html`
-- FFmpeg-based video processing (speed, trim, scale, GIF conversion).
-- Supports server mode and CLI process mode.
-- Requires `ffmpeg` and `ffprobe` in PATH.
+- FFmpeg-based video processing. Requires `ffmpeg` and `ffprobe` in PATH.
+- Supports server mode (`--host`/`--port`) and CLI mode (`--process -i file`).
+- Key capabilities: speed adjustment, multi-segment cut, target duration, trim, scale, GIF conversion, remove audio.
+- Command builder has two paths:
+  - **Simple path** (no cuts): uses `-filter:v` with chained filters.
+  - **filter_complex path** (with cuts): uses `trim` + `concat` to join keep-ranges, then applies speed/scale on the joined stream.
+- `target_duration` auto-calculates speed from remaining content after cuts.
+- `POST /api/calculate-speed` lets the UI update speed in real-time as cuts or target change.
+- CLI flags: `--cut START-END` (repeatable), `--target-duration SECONDS`.
 
 ## Dependency Management
 
