@@ -54,7 +54,7 @@ class VariantSpec:
     icon_canvas_scale: float = 1.55
     text_scale: float = 7.2
     spacing_scale: float = 1.35
-    logo_height_scale: float = 1.26
+    logo_height_scale: float = 1.30
     text_nudge_scale: float = 0.10
 
 
@@ -352,7 +352,10 @@ def create_logo(
     if not is_icon:
         font_size = int(unit * variant.text_scale)
         font = load_font(font_size, custom_font_path)
-        text_w, text_h = measure_text(brand_name, font)
+        tmp_draw = ImageDraw.Draw(Image.new("RGBA", (1, 1), (0, 0, 0, 0)))
+        bbox = tmp_draw.textbbox((0, 0), brand_name, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
         spacing = int(unit * variant.spacing_scale)
         side_padding = unit
         canvas_w = int(icon_w + spacing + text_w + side_padding * 2)
@@ -361,8 +364,8 @@ def create_logo(
         draw = ImageDraw.Draw(img)
         icon_x = side_padding
         icon_y = (canvas_h - icon_h) / 2
-        text_x = icon_x + icon_w + spacing
-        text_y = (canvas_h - text_h) / 2 - int(unit * variant.text_nudge_scale)
+        text_x = icon_x + icon_w + spacing - bbox[0]
+        text_y = (canvas_h - text_h) / 2 - bbox[1] - int(unit * variant.text_nudge_scale)
     else:
         canvas_w = int(icon_w * variant.icon_canvas_scale)
         canvas_h = int(icon_h * variant.icon_canvas_scale)
