@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video Kit</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #101418;
+      --muted: #5a6472;
+      --line: #d8dee6;
+      --brand: #1f6feb;
+      --danger: #d1242f;
+      --green: #1a7f37;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top right, #edf3ff, var(--bg) 55%);
+      color: var(--text);
+      font-family: "Arial", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 24px auto 48px;
+      padding: 0 20px;
+    }
+
+    h1 { margin: 0; font-size: 28px; }
+
+    .sub {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .warn-banner {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #fff3cd;
+      border: 1px solid #ffecb5;
+      color: #664d03;
+      font-size: 13px;
+      display: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 400px) 1fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 16px;
+    }
+
+    .form-grid { display: grid; gap: 14px; }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    input[type="range"] { width: 100%; }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .row { display: flex; gap: 10px; align-items: end; }
+    .row > * { flex: 1; }
+
+    .speed-group .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .speed-group .presets button {
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 8px;
+      background: #eef1f5;
+      color: var(--text);
+      border: 1px solid var(--line);
+      cursor: pointer;
+    }
+
+    .speed-group .presets button:hover { background: #dfe3ea; }
+    .speed-group .presets button.active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    /* Upload area */
+    .upload-zone {
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    .upload-zone:hover,
+    .upload-zone.dragover {
+      border-color: var(--brand);
+      background: #f0f6ff;
+    }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-zone .label { color: var(--muted); font-size: 14px; }
+    .upload-zone .label strong { color: var(--brand); }
+
+    .file-info {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      display: none;
+    }
+
+    .file-info .name { font-weight: 700; color: var(--text); }
+
+    /* Duration info bar */
+    .duration-bar {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #eef6ee;
+      border: 1px solid #c3e6cb;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #155724;
+      display: none;
+    }
+
+    .duration-bar.has-cuts { background: #e8f0fe; border-color: #b6d4fe; color: #084298; }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 16px 0;
+    }
+
+    .action {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    button.primary {
+      border: 0;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.primary[disabled] { opacity: 0.5; cursor: default; }
+
+    .status {
+      min-height: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status.error { color: var(--danger); }
+
+    /* GIF options (conditionally shown) */
+    .gif-options { display: none; }
+    .gif-options.visible { display: grid; gap: 14px; }
+
+    /* Encoding options group */
+    .encoding-options summary {
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+
+    .encoding-options .inner { padding-top: 10px; display: grid; gap: 14px; }
+
+    /* Cut segments */
+    .cut-section h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .cut-rows { display: grid; gap: 6px; }
+
+    .cut-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .cut-row input {
+      flex: 1;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .cut-row .cut-dash { color: var(--muted); font-size: 13px; flex-shrink: 0; }
+
+    .cut-row .remove-cut {
+      background: none;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--danger);
+      font-size: 16px;
+      line-height: 1;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cut-row .remove-cut:hover { background: #fff0f0; }
+
+    .add-cut-btn {
+      margin-top: 6px;
+      background: #eef1f5;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .add-cut-btn:hover { background: #dfe3ea; }
+
+    /* Target duration */
+    .target-row {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .target-row > label { flex: 1; }
+
+    .calc-info {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      min-height: 16px;
+    }
+
+    /* Output panel */
+    .output-section { display: grid; gap: 16px; }
+
+    .command-preview {
+      background: #1e1e2e;
+      color: #cdd6f4;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 12.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow-x: auto;
+      position: relative;
+      display: none;
+    }
+
+    .command-preview .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border: none;
+      color: #cdd6f4;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .command-preview .copy-btn:hover { background: rgba(255, 255, 255, 0.2); }
+
+    .video-output {
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      display: none;
+    }
+
+    .video-output .head {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .video-output video,
+    .video-output img {
+      width: 100%;
+      display: block;
+      background: #000;
+    }
+
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand);
+      text-decoration: none;
+    }
+
+    .download-link:hover { text-decoration: underline; }
+
+    .range-value {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Video Kit</h1>
+    <p class="sub">Process demo videos locally with ffmpeg &mdash; speed up, trim, cut segments, resize, convert to GIF, and more.</p>
+    <div id="warn-banner" class="warn-banner"></div>
+
+    <section class="layout">
+      <!-- Left panel: controls -->
+      <article class="panel">
+        <div class="form-grid" id="controls">
+          <!-- Upload -->
+          <div>
+            <h2>Upload Video</h2>
+            <div class="upload-zone" id="upload-zone">
+              <div class="label"><strong>Click to browse</strong> or drag & drop a video file</div>
+              <input type="file" id="file-input" accept="video/*,.mov,.mp4,.webm,.avi,.mkv">
+            </div>
+            <div class="file-info" id="file-info">
+              <span class="name" id="file-name"></span>
+              <span id="file-meta"></span>
+            </div>
+            <div class="duration-bar" id="duration-bar"></div>
+          </div>
+
+          <hr class="section-divider">
+
+          <!-- Speed -->
+          <div class="speed-group">
+            <label>
+              Speed <span class="range-value" id="speed-display">1.0x</span>
+              <input type="range" id="speed" min="0.25" max="4" step="0.01" value="1">
+            </label>
+            <div class="presets" id="speed-presets"></div>
+          </div>
+
+          <!-- Target Duration -->
+          <div class="target-row">
+            <label>
+              Target Duration (seconds)
+              <input type="number" id="target-duration" min="0.1" step="0.1" placeholder="e.g. 15">
+            </label>
+          </div>
+          <div class="calc-info" id="calc-info"></div>
+
+          <!-- Trim -->
+          <div class="row">
+            <label>
+              Trim Start
+              <input type="text" id="trim-start" placeholder="e.g. 0:05 or 5.0">
+            </label>
+            <label>
+              Trim End
+              <input type="text" id="trim-end" placeholder="e.g. 1:30 or 90.0">
+            </label>
+          </div>
+
+          <!-- Cut Segments -->
+          <div class="cut-section">
+            <h3>Cut Segments (remove time ranges)</h3>
+            <div class="cut-rows" id="cut-rows"></div>
+            <button type="button" class="add-cut-btn" id="add-cut-btn">+ Add Cut</button>
+          </div>
+
+          <!-- Scale -->
+          <label>
+            Scale
+            <select id="scale"></select>
+          </label>
+
+          <!-- Output format -->
+          <label>
+            Output Format
+            <select id="output-format"></select>
+          </label>
+
+          <!-- Audio -->
+          <label class="checkbox-row">
+            <input type="checkbox" id="remove-audio" checked>
+            Remove Audio
+          </label>
+
+          <!-- GIF options -->
+          <div class="gif-options" id="gif-options">
+            <div class="row">
+              <label>
+                GIF FPS
+                <input type="number" id="gif-fps" min="5" max="30" value="15">
+              </label>
+              <label>
+                GIF Width (px)
+                <input type="number" id="gif-width" min="160" max="1920" value="640">
+              </label>
+            </div>
+          </div>
+
+          <!-- Encoding options -->
+          <details class="encoding-options">
+            <summary>Encoding Options</summary>
+            <div class="inner">
+              <label>
+                CRF (Quality) <span class="range-value" id="crf-display">23</span>
+                <input type="range" id="crf" min="0" max="51" step="1" value="23">
+              </label>
+              <label>
+                Preset
+                <select id="preset"></select>
+              </label>
+            </div>
+          </details>
+
+          <hr class="section-divider">
+
+          <!-- Actions -->
+          <div class="action">
+            <button class="primary" id="process-btn" disabled>Process Video</button>
+            <button class="primary" id="preview-btn" disabled style="background:#555">Preview Command</button>
+          </div>
+          <div id="status" class="status"></div>
+        </div>
+      </article>
+
+      <!-- Right panel: output -->
+      <article class="panel">
+        <div class="output-section">
+          <h2>Output</h2>
+          <div class="command-preview" id="command-preview">
+            <button class="copy-btn" id="copy-cmd-btn">Copy</button>
+            <code id="command-text"></code>
+          </div>
+          <div class="video-output" id="video-output">
+            <div class="head">
+              <span id="output-name"></span>
+              <a class="download-link" id="download-link" href="#" download>Download</a>
+            </div>
+            <div id="output-media"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const $ = (sel) => document.getElementById(sel);
+
+    const fileInput = $("file-input");
+    const uploadZone = $("upload-zone");
+    const fileInfoEl = $("file-info");
+    const fileNameEl = $("file-name");
+    const fileMetaEl = $("file-meta");
+    const durationBar = $("duration-bar");
+    const speedInput = $("speed");
+    const speedDisplay = $("speed-display");
+    const speedPresetsEl = $("speed-presets");
+    const targetDurationInput = $("target-duration");
+    const calcInfoEl = $("calc-info");
+    const trimStartInput = $("trim-start");
+    const trimEndInput = $("trim-end");
+    const cutRowsEl = $("cut-rows");
+    const addCutBtn = $("add-cut-btn");
+    const scaleSelect = $("scale");
+    const formatSelect = $("output-format");
+    const removeAudioCb = $("remove-audio");
+    const gifOptionsEl = $("gif-options");
+    const gifFpsInput = $("gif-fps");
+    const gifWidthInput = $("gif-width");
+    const crfInput = $("crf");
+    const crfDisplay = $("crf-display");
+    const presetSelect = $("preset");
+    const processBtn = $("process-btn");
+    const previewBtn = $("preview-btn");
+    const statusEl = $("status");
+    const cmdPreview = $("command-preview");
+    const cmdText = $("command-text");
+    const copyCmdBtn = $("copy-cmd-btn");
+    const videoOutput = $("video-output");
+    const outputNameEl = $("output-name");
+    const downloadLink = $("download-link");
+    const outputMedia = $("output-media");
+    const warnBanner = $("warn-banner");
+
+    let uploadedFile = null;
+    let speedSetByTarget = false;
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (isError ? " error" : "");
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function formatDuration(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = (seconds % 60).toFixed(1);
+      return m > 0 ? `${m}m ${s}s` : `${s}s`;
+    }
+
+    // -- Load options from server --
+
+    async function loadOptions() {
+      try {
+        const resp = await fetch("/api/options");
+        const data = await resp.json();
+
+        if (!data.ffmpeg_available) {
+          warnBanner.textContent = "ffmpeg is not found in PATH. Video processing will not work. Please install ffmpeg.";
+          warnBanner.style.display = "block";
+        }
+
+        const d = data.defaults;
+
+        data.speed_presets.forEach((sp) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = sp + "x";
+          btn.dataset.speed = sp;
+          if (sp === d.speed) btn.classList.add("active");
+          btn.addEventListener("click", () => {
+            speedInput.value = sp;
+            speedDisplay.textContent = sp + "x";
+            syncSpeedPresets();
+            onManualSpeedChange();
+          });
+          speedPresetsEl.appendChild(btn);
+        });
+
+        scaleSelect.innerHTML = "";
+        data.scale_options.forEach((s) => {
+          const opt = document.createElement("option");
+          opt.value = s;
+          opt.textContent = s;
+          if (s === d.scale) opt.selected = true;
+          scaleSelect.appendChild(opt);
+        });
+
+        formatSelect.innerHTML = "";
+        data.output_formats.forEach((f) => {
+          const opt = document.createElement("option");
+          opt.value = f;
+          opt.textContent = f.toUpperCase();
+          if (f === d.output_format) opt.selected = true;
+          formatSelect.appendChild(opt);
+        });
+
+        presetSelect.innerHTML = "";
+        data.encoding_presets.forEach((p) => {
+          const opt = document.createElement("option");
+          opt.value = p;
+          opt.textContent = p;
+          if (p === d.preset) opt.selected = true;
+          presetSelect.appendChild(opt);
+        });
+
+        speedInput.value = d.speed;
+        speedDisplay.textContent = d.speed + "x";
+        crfInput.value = d.crf;
+        crfDisplay.textContent = d.crf;
+        removeAudioCb.checked = d.remove_audio;
+        gifFpsInput.value = d.gif_fps;
+        gifWidthInput.value = d.gif_width;
+
+        setStatus("Ready. Upload a video to begin.");
+      } catch (err) {
+        setStatus("Failed to load options: " + err.message, true);
+      }
+    }
+
+    // -- Speed sync --
+
+    function syncSpeedPresets() {
+      const val = parseFloat(speedInput.value);
+      speedPresetsEl.querySelectorAll("button").forEach((btn) => {
+        btn.classList.toggle("active", parseFloat(btn.dataset.speed) === val);
+      });
+    }
+
+    function onManualSpeedChange() {
+      speedSetByTarget = false;
+      targetDurationInput.value = "";
+      calcInfoEl.textContent = "";
+    }
+
+    speedInput.addEventListener("input", () => {
+      speedDisplay.textContent = parseFloat(speedInput.value).toFixed(2) + "x";
+      syncSpeedPresets();
+      if (!speedSetByTarget) {
+        onManualSpeedChange();
+      }
+    });
+
+    crfInput.addEventListener("input", () => {
+      crfDisplay.textContent = crfInput.value;
+    });
+
+    formatSelect.addEventListener("change", () => {
+      gifOptionsEl.classList.toggle("visible", formatSelect.value === "gif");
+    });
+
+    // -- Duration bar --
+
+    function updateDurationBar() {
+      if (!uploadedFile || !uploadedFile.duration) {
+        durationBar.style.display = "none";
+        return;
+      }
+      const cuts = getCutValues();
+      const totalCut = cuts.reduce((s, c) => s + Math.max(0, c[1] - c[0]), 0);
+
+      if (totalCut > 0) {
+        const remaining = Math.max(0, uploadedFile.duration - totalCut);
+        durationBar.textContent =
+          `Duration: ${formatDuration(uploadedFile.duration)}` +
+          `  |  Cuts: ${formatDuration(totalCut)}` +
+          `  |  Remaining: ${formatDuration(remaining)}`;
+        durationBar.className = "duration-bar has-cuts";
+      } else {
+        durationBar.textContent = `Duration: ${formatDuration(uploadedFile.duration)}`;
+        durationBar.className = "duration-bar";
+      }
+      durationBar.style.display = "block";
+    }
+
+    // -- Cut segments --
+
+    function addCutRow(startVal, endVal) {
+      const row = document.createElement("div");
+      row.className = "cut-row";
+
+      const startInput = document.createElement("input");
+      startInput.type = "text";
+      startInput.placeholder = "start";
+      startInput.value = startVal || "";
+      startInput.addEventListener("input", onCutsChanged);
+
+      const dash = document.createElement("span");
+      dash.className = "cut-dash";
+      dash.textContent = "\u2013";
+
+      const endInput = document.createElement("input");
+      endInput.type = "text";
+      endInput.placeholder = "end";
+      endInput.value = endVal || "";
+      endInput.addEventListener("input", onCutsChanged);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "remove-cut";
+      removeBtn.textContent = "\u00d7";
+      removeBtn.addEventListener("click", () => {
+        row.remove();
+        onCutsChanged();
+      });
+
+      row.appendChild(startInput);
+      row.appendChild(dash);
+      row.appendChild(endInput);
+      row.appendChild(removeBtn);
+      cutRowsEl.appendChild(row);
+    }
+
+    addCutBtn.addEventListener("click", () => {
+      addCutRow("", "");
+    });
+
+    function getCutValues() {
+      const cuts = [];
+      cutRowsEl.querySelectorAll(".cut-row").forEach((row) => {
+        const inputs = row.querySelectorAll("input");
+        const s = parseTime(inputs[0].value);
+        const e = parseTime(inputs[1].value);
+        if (s !== null && e !== null && e > s) {
+          cuts.push([s, e]);
+        }
+      });
+      return cuts;
+    }
+
+    function parseTime(str) {
+      str = (str || "").trim();
+      if (!str) return null;
+      const parts = str.split(":");
+      if (parts.length === 1) { const n = parseFloat(parts[0]); return isNaN(n) ? null : n; }
+      if (parts.length === 2) {
+        const m = parseInt(parts[0], 10), s = parseFloat(parts[1]);
+        return (isNaN(m) || isNaN(s)) ? null : m * 60 + s;
+      }
+      if (parts.length === 3) {
+        const h = parseInt(parts[0], 10), m = parseInt(parts[1], 10), s = parseFloat(parts[2]);
+        return (isNaN(h) || isNaN(m) || isNaN(s)) ? null : h * 3600 + m * 60 + s;
+      }
+      return null;
+    }
+
+    function onCutsChanged() {
+      updateDurationBar();
+      recalculateSpeed();
+    }
+
+    // -- Target duration & auto-speed --
+
+    let calcDebounce = null;
+
+    targetDurationInput.addEventListener("input", () => {
+      clearTimeout(calcDebounce);
+      calcDebounce = setTimeout(recalculateSpeed, 300);
+    });
+
+    trimStartInput.addEventListener("input", () => { onCutsChanged(); });
+    trimEndInput.addEventListener("input", () => { onCutsChanged(); });
+
+    async function recalculateSpeed() {
+      const target = parseFloat(targetDurationInput.value);
+      if (!uploadedFile || !target || target <= 0) {
+        calcInfoEl.textContent = "";
+        return;
+      }
+
+      const cuts = getCutValues();
+      try {
+        const resp = await fetch("/api/calculate-speed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input_file: uploadedFile.uploaded_name,
+            cuts: cuts,
+            target_duration: target,
+            trim_start: trimStartInput.value.trim(),
+            trim_end: trimEndInput.value.trim(),
+          }),
+        });
+        const data = await resp.json();
+        if (!data.ok) return;
+
+        const r = data.result;
+        const cutInfo = r.cut_duration > 0
+          ? ` (${formatDuration(r.cut_duration)} cut)`
+          : "";
+
+        calcInfoEl.textContent =
+          `${formatDuration(r.kept_duration)} remaining${cutInfo}` +
+          ` / ${formatDuration(target)} target = ${r.speed.toFixed(2)}x`;
+
+        speedSetByTarget = true;
+        speedInput.value = Math.min(r.speed, 4);
+        speedDisplay.textContent = r.speed.toFixed(2) + "x";
+        syncSpeedPresets();
+      } catch (err) {
+        calcInfoEl.textContent = "";
+      }
+    }
+
+    // -- Upload --
+
+    uploadZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      uploadZone.classList.add("dragover");
+    });
+
+    uploadZone.addEventListener("dragleave", () => {
+      uploadZone.classList.remove("dragover");
+    });
+
+    uploadZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        handleUpload(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        handleUpload(fileInput.files[0]);
+      }
+    });
+
+    async function handleUpload(file) {
+      setStatus("Uploading " + file.name + "...");
+      processBtn.disabled = true;
+      previewBtn.disabled = true;
+
+      const fd = new FormData();
+      fd.append("file", file);
+
+      try {
+        const resp = await fetch("/api/upload", { method: "POST", body: fd });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error);
+
+        uploadedFile = data.result;
+
+        fileNameEl.textContent = uploadedFile.original_name;
+        const parts = [];
+        if (uploadedFile.duration) parts.push(formatDuration(uploadedFile.duration));
+        if (uploadedFile.width && uploadedFile.height)
+          parts.push(uploadedFile.width + " x " + uploadedFile.height);
+        if (uploadedFile.codec) parts.push(uploadedFile.codec);
+        if (uploadedFile.fps) parts.push(uploadedFile.fps + " fps");
+        if (uploadedFile.size_bytes) parts.push(formatBytes(uploadedFile.size_bytes));
+        if (uploadedFile.has_audio !== undefined)
+          parts.push(uploadedFile.has_audio ? "has audio" : "no audio");
+        fileMetaEl.textContent = parts.length ? " \u2014 " + parts.join(", ") : "";
+        fileInfoEl.style.display = "block";
+
+        updateDurationBar();
+
+        processBtn.disabled = false;
+        previewBtn.disabled = false;
+        setStatus("File uploaded. Configure options and press Process Video.");
+      } catch (err) {
+        setStatus("Upload failed: " + err.message, true);
+      }
+    }
+
+    // -- Build payload --
+
+    function buildPayload() {
+      const cuts = getCutValues();
+      const target = parseFloat(targetDurationInput.value);
+      return {
+        input_file: uploadedFile.uploaded_name,
+        output_format: formatSelect.value,
+        speed: parseFloat(speedInput.value),
+        trim_start: trimStartInput.value.trim(),
+        trim_end: trimEndInput.value.trim(),
+        remove_audio: removeAudioCb.checked,
+        crf: parseInt(crfInput.value, 10),
+        preset: presetSelect.value,
+        scale: scaleSelect.value,
+        gif_fps: parseInt(gifFpsInput.value, 10),
+        gif_width: parseInt(gifWidthInput.value, 10),
+        cuts: cuts.length > 0 ? cuts : [],
+        target_duration: (target && target > 0) ? target : 0,
+      };
+    }
+
+    // -- Preview command --
+
+    previewBtn.addEventListener("click", async () => {
+      if (!uploadedFile) return;
+      setStatus("Generating command preview...");
+      previewBtn.disabled = true;
+
+      try {
+        const resp = await fetch("/api/preview-command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error);
+
+        cmdText.textContent = data.result.command;
+        cmdPreview.style.display = "block";
+        setStatus("Command preview generated.");
+      } catch (err) {
+        setStatus("Preview failed: " + err.message, true);
+      } finally {
+        previewBtn.disabled = false;
+      }
+    });
+
+    // -- Process --
+
+    processBtn.addEventListener("click", async () => {
+      if (!uploadedFile) return;
+      setStatus("Processing video, please wait...");
+      processBtn.disabled = true;
+      previewBtn.disabled = true;
+
+      try {
+        const resp = await fetch("/api/process", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error);
+
+        const r = data.result;
+
+        cmdText.textContent = r.command;
+        cmdPreview.style.display = "block";
+
+        outputNameEl.textContent = r.output_file + " (" + formatBytes(r.output_size_bytes) + ")";
+        downloadLink.href = r.output_url;
+        downloadLink.download = r.output_file;
+
+        outputMedia.innerHTML = "";
+        if (r.output_file.endsWith(".gif")) {
+          const img = document.createElement("img");
+          img.src = r.output_url + "?t=" + Date.now();
+          img.alt = r.output_file;
+          outputMedia.appendChild(img);
+        } else {
+          const vid = document.createElement("video");
+          vid.src = r.output_url + "?t=" + Date.now();
+          vid.controls = true;
+          vid.autoplay = false;
+          vid.preload = "metadata";
+          outputMedia.appendChild(vid);
+        }
+        videoOutput.style.display = "block";
+
+        setStatus("Done! Output: " + r.output_file + " (" + formatBytes(r.output_size_bytes) + ")");
+      } catch (err) {
+        setStatus("Processing failed: " + err.message, true);
+      } finally {
+        processBtn.disabled = false;
+        previewBtn.disabled = false;
+      }
+    });
+
+    // -- Copy command --
+
+    copyCmdBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(cmdText.textContent).then(() => {
+        const orig = copyCmdBtn.textContent;
+        copyCmdBtn.textContent = "Copied!";
+        setTimeout(() => { copyCmdBtn.textContent = orig; }, 1500);
+      });
+    });
+
+    // -- Init --
+    loadOptions();
+  </script>
+</body>
+</html>

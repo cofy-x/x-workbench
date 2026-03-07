@@ -42,13 +42,21 @@ Use the root `Makefile` as the primary interface:
 - `make check TOOL=<tool_name>`
 - `make check-all`
 
-## Current Tool
+## Current Tools
 
 ### `logo_generator`
 
 - Backend: `tools/logo_generator/app.py`
 - UI: `tools/logo_generator/web/index.html`
 - Supports server mode and CLI generate mode.
+
+### `video_kit`
+
+- Backend: `tools/video_kit/app.py`
+- UI: `tools/video_kit/web/index.html`
+- FFmpeg-based video processing (speed, trim, scale, GIF conversion).
+- Supports server mode and CLI process mode.
+- Requires `ffmpeg` and `ffprobe` in PATH.
 
 ## Dependency Management
 
