@@ -22,33 +22,56 @@
 └── README.md
 ```
 
+## Prerequisites
+
+- Python >= 3.13 (managed via [uv](https://docs.astral.sh/uv/))
+- Tool-specific dependencies:
+  - **video_kit** — [ffmpeg](https://ffmpeg.org/) and ffprobe (`brew install ffmpeg` / `apt install ffmpeg`)
+
 ## Quick Start
 
-List tools:
+List all available tools:
 
 ```bash
 make list-tools
 ```
 
-Run a tool server:
+### logo_generator
+
+Generate brand logos with configurable icon variants.
 
 ```bash
+# Start web UI
 make serve TOOL=logo_generator
-```
 
-Generate once from CLI:
-
-```bash
+# Generate from CLI
 make generate TOOL=logo_generator BRAND=Avant
 ```
 
-## Current Tool
+### video_kit
 
-### logo_generator
+Process demo videos — speed up, cut segments, trim, resize, convert to GIF.
 
-- Backend: `tools/logo_generator/app.py`
-- UI: `tools/logo_generator/web/index.html`
-- Docs: `tools/logo_generator/README.md`
+```bash
+# Start web UI
+make serve TOOL=video_kit
+
+# Speed up 2.67x (CLI)
+uv run python tools/video_kit/app.py --process -i demo.mp4 --speed 2.67
+
+# Cut waiting segments + target 15s output
+uv run python tools/video_kit/app.py --process -i demo.mp4 \
+  --cut 8-15 --cut 25-30 --target-duration 15
+```
+
+See [tools/video_kit/README.md](tools/video_kit/README.md) for full CLI options.
+
+## Current Tools
+
+| Tool | Description | Docs |
+|------|-------------|------|
+| `logo_generator` | Brand logo generation with icon variants | [README](tools/logo_generator/README.md) |
+| `video_kit` | FFmpeg video processing (speed, cut, trim, GIF) | [README](tools/video_kit/README.md) |
 
 ## Add a New Tool
 
