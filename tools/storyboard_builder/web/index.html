@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Storyboard Builder</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #fff;
+      --text: #101418;
+      --muted: #5a6472;
+      --line: #d8dee6;
+      --brand: #1f6feb;
+      --danger: #d1242f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(circle at top right, #ecf4ff, var(--bg) 60%);
+      font-family: Arial, "PingFang SC", sans-serif;
+    }
+    .page { max-width: 1260px; margin: 24px auto 48px; padding: 0 20px; }
+    h1 { margin: 0; font-size: 28px; }
+    .sub { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .layout { margin-top: 18px; display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 18px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 16px; }
+    .form-grid { display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+    }
+    .upload-zone {
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      text-align: center;
+      padding: 22px 10px;
+      position: relative;
+    }
+    .upload-zone:hover { border-color: var(--brand); background: #f0f6ff; }
+    .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-info {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 10px;
+    }
+    .row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary { background: #5b6577; }
+    button[disabled] { opacity: 0.55; cursor: default; }
+    .status { min-height: 18px; color: var(--muted); font-size: 13px; }
+    .status.error { color: var(--danger); }
+    .gallery { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .thumb {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .thumb img { width: 100%; display: block; cursor: zoom-in; }
+    .thumb .meta { font-size: 11px; padding: 6px 8px; color: var(--muted); }
+    .sheet { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: none; }
+    .sheet .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #f9fbfe;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sheet img { width: 100%; display: block; cursor: zoom-in; }
+    .link { color: var(--brand); text-decoration: none; font-weight: 700; }
+    .link:hover { text-decoration: underline; }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: rgba(10, 16, 24, 0.84);
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+    .lightbox[hidden] { display: none; }
+    .lightbox-image {
+      max-width: min(96vw, 1600px);
+      max-height: 88vh;
+      border-radius: 10px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+      background: #0c1118;
+    }
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 19px;
+      border: 0;
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 26px;
+      line-height: 1;
+      font-family: Arial, "PingFang SC", sans-serif;
+      cursor: pointer;
+    }
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Storyboard Builder</h1>
+    <p class="sub">Extract scene/interval frames, build contact sheet, and export timeline summary.</p>
+
+    <section class="layout">
+      <article class="panel">
+        <h2>Extractor</h2>
+        <div class="form-grid">
+          <div class="upload-zone">
+            <div><strong>Click to upload</strong> or drop video file</div>
+            <input id="file-input" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi">
+          </div>
+          <div id="file-info" class="file-info"></div>
+
+          <label>
+            Mode
+            <select id="mode"></select>
+          </label>
+
+          <div class="row">
+            <label>
+              Scene Threshold
+              <input id="scene-threshold" type="number" min="0.01" max="0.99" step="0.01" value="0.30">
+            </label>
+            <label>
+              Interval Seconds
+              <input id="interval-seconds" type="number" min="0.1" step="0.1" value="2.0">
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Max Frames
+              <input id="max-frames" type="number" min="1" max="200" value="24">
+            </label>
+            <label>
+              Contact Columns
+              <input id="cols" type="number" min="1" max="12" value="5">
+            </label>
+          </div>
+
+          <label>
+            Thumbnail Width
+            <input id="thumb-width" type="number" min="120" max="640" value="280">
+          </label>
+
+          <div class="actions">
+            <button id="extract-btn" disabled>1) Extract Frames</button>
+            <button id="build-btn" class="secondary" disabled>2) Build Contact Sheet</button>
+          </div>
+
+          <div id="status" class="status"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Result</h2>
+        <div id="gallery" class="gallery"></div>
+
+        <div id="sheet" class="sheet">
+          <div class="head">
+            <span id="sheet-name">contact_sheet.jpg</span>
+            <span>
+              <a id="sheet-open-link" class="link" href="#" target="_blank" rel="noopener">Open Sheet</a>
+              |
+              <a id="sheet-download-link" class="link" href="#" download>Download Sheet</a>
+              |
+              <a id="summary-link" class="link" href="#" download>Summary</a>
+            </span>
+          </div>
+          <img id="sheet-image" alt="contact sheet">
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview">
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close preview">&times;</button>
+    <img id="lightbox-image" class="lightbox-image" alt="preview">
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const fileInput = $("file-input");
+    const fileInfo = $("file-info");
+    const modeSelect = $("mode");
+    const sceneThreshold = $("scene-threshold");
+    const intervalSeconds = $("interval-seconds");
+    const maxFrames = $("max-frames");
+    const cols = $("cols");
+    const thumbWidth = $("thumb-width");
+    const extractBtn = $("extract-btn");
+    const buildBtn = $("build-btn");
+    const statusEl = $("status");
+    const galleryEl = $("gallery");
+    const sheetEl = $("sheet");
+    const sheetName = $("sheet-name");
+    const sheetImage = $("sheet-image");
+    const sheetOpenLink = $("sheet-open-link");
+    const sheetDownloadLink = $("sheet-download-link");
+    const summaryLink = $("summary-link");
+    const lightboxEl = $("lightbox");
+    const lightboxImage = $("lightbox-image");
+    const lightboxClose = $("lightbox-close");
+
+    let uploaded = null;
+    let latestJobId = "";
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (isError ? " error" : "");
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "0 B";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function openLightbox(src, alt) {
+      lightboxImage.src = src;
+      lightboxImage.alt = alt || "preview";
+      lightboxEl.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeLightbox() {
+      lightboxEl.hidden = true;
+      lightboxImage.removeAttribute("src");
+      document.body.style.overflow = "";
+    }
+
+    lightboxClose.addEventListener("click", closeLightbox);
+    lightboxEl.addEventListener("click", (event) => {
+      if (event.target === lightboxEl) closeLightbox();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !lightboxEl.hidden) closeLightbox();
+    });
+    sheetImage.addEventListener("click", () => {
+      if (sheetImage.src) openLightbox(sheetImage.src, sheetName.textContent);
+    });
+
+    async function loadOptions() {
+      try {
+        const resp = await fetch("api/options");
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Failed to load options");
+
+        const r = data.result;
+        modeSelect.innerHTML = "";
+        r.modes.forEach((m) => {
+          const opt = document.createElement("option");
+          opt.value = m;
+          opt.textContent = m;
+          if (m === r.defaults.mode) opt.selected = true;
+          modeSelect.appendChild(opt);
+        });
+
+        sceneThreshold.value = r.defaults.scene_threshold;
+        intervalSeconds.value = r.defaults.interval_seconds;
+        maxFrames.value = r.defaults.max_frames;
+        cols.value = r.defaults.cols;
+        thumbWidth.value = r.defaults.thumb_width;
+
+        setStatus("Ready. Upload a video to begin.");
+      } catch (err) {
+        setStatus(err.message || "Failed to load options", true);
+      }
+    }
+
+    async function upload(file) {
+      setStatus("Uploading " + file.name + "...");
+      const fd = new FormData();
+      fd.append("file", file);
+
+      try {
+        const resp = await fetch("api/upload", { method: "POST", body: fd });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Upload failed");
+
+        uploaded = data.result;
+        fileInfo.style.display = "block";
+        fileInfo.textContent = `${uploaded.original_name} | ${formatBytes(uploaded.size_bytes || 0)} | ${uploaded.width || "?"}x${uploaded.height || "?"} | ${uploaded.duration ? uploaded.duration.toFixed(2) + "s" : "duration unknown"}`;
+
+        extractBtn.disabled = false;
+        setStatus("Upload complete. Run extraction next.");
+      } catch (err) {
+        setStatus(err.message || "Upload failed", true);
+      }
+    }
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) upload(fileInput.files[0]);
+    });
+
+    extractBtn.addEventListener("click", async () => {
+      if (!uploaded) return;
+      extractBtn.disabled = true;
+      buildBtn.disabled = true;
+      setStatus("Extracting frames...");
+
+      try {
+        const resp = await fetch("api/extract-frames", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input_file: uploaded.uploaded_name,
+            mode: modeSelect.value,
+            scene_threshold: parseFloat(sceneThreshold.value),
+            interval_seconds: parseFloat(intervalSeconds.value),
+            max_frames: parseInt(maxFrames.value, 10),
+          }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Extract failed");
+
+        const r = data.result;
+        latestJobId = r.job_id;
+        galleryEl.innerHTML = "";
+        r.frames.forEach((item) => {
+          const imageUrl = `${item.url}?t=${Date.now()}`;
+          const card = document.createElement("div");
+          card.className = "thumb";
+          card.innerHTML = `<img src="${imageUrl}" alt="${item.filename}"><div class="meta">#${item.index} ${item.timestamp_label}</div>`;
+          const imgEl = card.querySelector("img");
+          if (imgEl) {
+            imgEl.addEventListener("click", () => openLightbox(imageUrl, item.filename));
+          }
+          galleryEl.appendChild(card);
+        });
+
+        buildBtn.disabled = false;
+        setStatus(`Extracted ${r.frame_count} frames.`);
+      } catch (err) {
+        setStatus(err.message || "Extract failed", true);
+      } finally {
+        extractBtn.disabled = false;
+      }
+    });
+
+    buildBtn.addEventListener("click", async () => {
+      if (!latestJobId) return;
+      buildBtn.disabled = true;
+      setStatus("Building contact sheet...");
+
+      try {
+        const resp = await fetch("api/build-contact-sheet", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            job_id: latestJobId,
+            cols: parseInt(cols.value, 10),
+            thumb_width: parseInt(thumbWidth.value, 10),
+          }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Build failed");
+
+        const r = data.result;
+        sheetName.textContent = `contact_sheet.jpg (${r.frame_count} frames)`;
+        sheetImage.src = `${r.contact_sheet_url}?t=${Date.now()}`;
+        sheetOpenLink.href = r.contact_sheet_url;
+        sheetDownloadLink.href = r.contact_sheet_url;
+        sheetDownloadLink.download = "contact_sheet.jpg";
+        summaryLink.href = r.summary_url;
+        sheetEl.style.display = "block";
+
+        setStatus("Contact sheet generated.");
+      } catch (err) {
+        setStatus(err.message || "Build failed", true);
+      } finally {
+        buildBtn.disabled = false;
+      }
+    });
+
+    loadOptions();
+  </script>
+</body>
+</html>

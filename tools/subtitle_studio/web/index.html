@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Subtitle Studio</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #fff;
+      --text: #101418;
+      --muted: #5a6472;
+      --line: #d8dee6;
+      --brand: #0a66c2;
+      --danger: #d1242f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top right, #ecf4ff, var(--bg) 50%);
+      color: var(--text);
+      font-family: Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
+    }
+    .page {
+      max-width: 1240px;
+      margin: 24px auto 48px;
+      padding: 0 20px;
+    }
+    h1 { margin: 0; font-size: 28px; }
+    .sub { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
+    .layout {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: minmax(300px, 420px) 1fr;
+      gap: 18px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 16px; }
+    .form-grid { display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+    input[type="text"], select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 13px;
+      background: #fff;
+      color: var(--text);
+    }
+    textarea { min-height: 340px; font-family: Menlo, Consolas, monospace; line-height: 1.45; }
+    .upload-zone {
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      text-align: center;
+      padding: 24px 12px;
+      position: relative;
+      transition: border-color .2s, background .2s;
+    }
+    .upload-zone:hover { border-color: var(--brand); background: #f0f6ff; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-info {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: none;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      background: var(--brand);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary { background: #596273; }
+    button[disabled] { opacity: 0.55; cursor: default; }
+    .status { min-height: 18px; color: var(--muted); font-size: 13px; }
+    .status.error { color: var(--danger); }
+    .result {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+    }
+    .result .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #f9fbfe;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .result video {
+      display: block;
+      width: 100%;
+      background: #000;
+    }
+    .link { color: var(--brand); text-decoration: none; font-weight: 700; }
+    .link:hover { text-decoration: underline; }
+    .note {
+      background: #eef6ff;
+      border: 1px solid #b6d4fe;
+      color: #084298;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      display: none;
+    }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Subtitle Studio</h1>
+    <p class="sub">Upload video, transcribe speech to SRT, edit subtitles, and render final video locally.</p>
+
+    <section class="layout">
+      <article class="panel">
+        <h2>Workflow</h2>
+        <div class="form-grid">
+          <div class="upload-zone">
+            <div><strong>Click to upload</strong> or drop a video file</div>
+            <input id="file-input" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi">
+          </div>
+          <div id="file-info" class="file-info"></div>
+
+          <label>
+            Model
+            <select id="model"></select>
+          </label>
+
+          <label>
+            Language
+            <input id="lang" type="text" value="auto" placeholder="auto / en / zh">
+          </label>
+
+          <label>
+            Render Style
+            <select id="style"></select>
+          </label>
+
+          <label>
+            Output Format
+            <select id="out-format"></select>
+          </label>
+
+          <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
+            <input id="burn-in" type="checkbox" checked>
+            Burn subtitles into video
+          </label>
+
+          <div class="actions">
+            <button id="transcribe-btn" disabled>1) Transcribe</button>
+            <button id="render-btn" class="secondary" disabled>2) Render</button>
+          </div>
+
+          <div id="note" class="note"></div>
+          <div id="status" class="status"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Subtitle Editor (SRT)</h2>
+        <textarea id="srt-editor" placeholder="SRT content appears here after transcription..."></textarea>
+
+        <div id="result" class="result" style="margin-top:14px;">
+          <div class="head">
+            <span id="result-name">output.mp4</span>
+            <a id="download-link" class="link" href="#" download>Download</a>
+          </div>
+          <video id="result-video" controls preload="metadata"></video>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const fileInput = $("file-input");
+    const fileInfo = $("file-info");
+    const modelSelect = $("model");
+    const langInput = $("lang");
+    const styleSelect = $("style");
+    const formatSelect = $("out-format");
+    const burnInInput = $("burn-in");
+    const transcribeBtn = $("transcribe-btn");
+    const renderBtn = $("render-btn");
+    const srtEditor = $("srt-editor");
+    const statusEl = $("status");
+    const noteEl = $("note");
+    const resultEl = $("result");
+    const resultNameEl = $("result-name");
+    const downloadLink = $("download-link");
+    const resultVideo = $("result-video");
+
+    let uploaded = null;
+    let srtRelativePath = "";
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (isError ? " error" : "");
+    }
+
+    function setNote(text, visible) {
+      noteEl.textContent = text;
+      noteEl.style.display = visible ? "block" : "none";
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "0 B";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    async function loadOptions() {
+      try {
+        const resp = await fetch("api/options");
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Failed to load options");
+
+        const r = data.result;
+
+        modelSelect.innerHTML = "";
+        r.models.forEach((m) => {
+          const opt = document.createElement("option");
+          opt.value = m;
+          opt.textContent = m;
+          if (m === r.defaults.model) opt.selected = true;
+          modelSelect.appendChild(opt);
+        });
+
+        styleSelect.innerHTML = "";
+        r.styles.forEach((s) => {
+          const opt = document.createElement("option");
+          opt.value = s;
+          opt.textContent = s;
+          if (s === r.defaults.style) opt.selected = true;
+          styleSelect.appendChild(opt);
+        });
+
+        formatSelect.innerHTML = "";
+        r.output_formats.forEach((f) => {
+          const opt = document.createElement("option");
+          opt.value = f;
+          opt.textContent = f.toUpperCase();
+          if (f === r.defaults.out_format) opt.selected = true;
+          formatSelect.appendChild(opt);
+        });
+
+        if (!r.faster_whisper_available) {
+          setNote("faster-whisper is unavailable. Install dependencies (uv sync) before transcription.", true);
+        }
+        setStatus("Ready. Upload a video to start.");
+      } catch (err) {
+        setStatus(err.message || "Failed to load options", true);
+      }
+    }
+
+    async function uploadFile(file) {
+      setStatus("Uploading " + file.name + "...");
+      transcribeBtn.disabled = true;
+      renderBtn.disabled = true;
+      srtRelativePath = "";
+
+      const fd = new FormData();
+      fd.append("file", file);
+
+      try {
+        const resp = await fetch("api/upload", { method: "POST", body: fd });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Upload failed");
+
+        uploaded = data.result;
+        fileInfo.style.display = "block";
+        fileInfo.textContent = `${uploaded.original_name} | ${formatBytes(uploaded.size_bytes || 0)} | ${uploaded.width || "?"}x${uploaded.height || "?"} | ${uploaded.duration ? uploaded.duration.toFixed(2) + "s" : "duration unknown"}`;
+
+        transcribeBtn.disabled = false;
+        setStatus("Upload complete. Click Transcribe.");
+      } catch (err) {
+        setStatus(err.message || "Upload failed", true);
+      }
+    }
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        uploadFile(fileInput.files[0]);
+      }
+    });
+
+    transcribeBtn.addEventListener("click", async () => {
+      if (!uploaded) return;
+      transcribeBtn.disabled = true;
+      setStatus("Transcribing... this may take a while.");
+
+      try {
+        const resp = await fetch("api/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input_file: uploaded.uploaded_name,
+            lang: langInput.value.trim() || "auto",
+            model: modelSelect.value,
+          }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Transcribe failed");
+
+        const r = data.result;
+        srtRelativePath = r.srt_relative_path;
+        srtEditor.value = "";
+        r.segments.forEach((seg, idx) => {
+          const start = toSrtTime(seg.start);
+          const end = toSrtTime(seg.end);
+          srtEditor.value += `${idx + 1}\n${start} --> ${end}\n${seg.text}\n\n`;
+        });
+
+        renderBtn.disabled = false;
+        setStatus(`Transcribed ${r.segment_count} segments (lang: ${r.detected_language}).`);
+      } catch (err) {
+        setStatus(err.message || "Transcribe failed", true);
+      } finally {
+        transcribeBtn.disabled = false;
+      }
+    });
+
+    renderBtn.addEventListener("click", async () => {
+      if (!uploaded || !srtRelativePath) return;
+      renderBtn.disabled = true;
+      setStatus("Rendering video...");
+
+      try {
+        const resp = await fetch("api/render", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input_file: uploaded.uploaded_name,
+            srt_relative_path: srtRelativePath,
+            srt_text: srtEditor.value,
+            burn_in: burnInInput.checked,
+            style: styleSelect.value,
+            out_format: formatSelect.value,
+          }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Render failed");
+
+        const r = data.result;
+        resultNameEl.textContent = `${r.output_file} (${formatBytes(r.output_size_bytes)})`;
+        downloadLink.href = r.output_url;
+        downloadLink.download = r.output_file;
+        resultVideo.src = `${r.output_url}?t=${Date.now()}`;
+        resultEl.style.display = "block";
+
+        setStatus("Render complete.");
+      } catch (err) {
+        setStatus(err.message || "Render failed", true);
+      } finally {
+        renderBtn.disabled = false;
+      }
+    });
+
+    function toSrtTime(seconds) {
+      const ms = Math.max(0, Math.round(seconds * 1000));
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      const r = ms % 1000;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")},${String(r).padStart(3, "0")}`;
+    }
+
+    loadOptions();
+  </script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Multi Format Exporter</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #fff;
+      --text: #101418;
+      --muted: #5a6472;
+      --line: #d8dee6;
+      --brand: #1f6feb;
+      --danger: #d1242f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, "PingFang SC", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top right, #ebf2ff, var(--bg) 55%);
+    }
+    .page { max-width: 1240px; margin: 24px auto 48px; padding: 0 20px; }
+    h1 { margin: 0; font-size: 28px; }
+    .sub { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .layout { margin-top: 18px; display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 18px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 16px; }
+    .form-grid { display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; }
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--text);
+      background: #fff;
+    }
+    textarea { min-height: 92px; font-family: Menlo, Consolas, monospace; }
+    .upload-zone {
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      padding: 22px 10px;
+      text-align: center;
+      position: relative;
+    }
+    .upload-zone:hover { border-color: var(--brand); background: #f0f6ff; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-info {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 8px 10px;
+      display: none;
+    }
+    .preset-list { display: grid; gap: 6px; }
+    .preset-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    .row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #fff;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary { background: #576377; }
+    button[disabled] { opacity: 0.55; cursor: default; }
+    .status { min-height: 18px; font-size: 13px; color: var(--muted); }
+    .status.error { color: var(--danger); }
+    .command {
+      margin-top: 12px;
+      border-radius: 10px;
+      background: #101827;
+      color: #dbe7ff;
+      font-family: Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      padding: 12px;
+      white-space: pre-wrap;
+      display: none;
+      max-height: 320px;
+      overflow: auto;
+    }
+    .outputs { display: grid; gap: 10px; margin-top: 12px; }
+    .source-preview {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 12px;
+      display: none;
+      background: #fff;
+    }
+    .source-preview .head {
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfe;
+      font-weight: 700;
+    }
+    .source-preview video {
+      width: 100%;
+      display: block;
+      background: #000;
+      max-height: 300px;
+    }
+    .output-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 13px;
+      display: grid;
+      gap: 8px;
+    }
+    .output-item .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .output-item video {
+      width: 100%;
+      display: block;
+      background: #000;
+      border-radius: 8px;
+      max-height: 260px;
+    }
+    .link { color: var(--brand); text-decoration: none; font-weight: 700; }
+    .link:hover { text-decoration: underline; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Multi Format Exporter</h1>
+    <p class="sub">Export one source video to platform-ready formats in one batch.</p>
+
+    <section class="layout">
+      <article class="panel">
+        <h2>Batch Config</h2>
+        <div class="form-grid">
+          <div class="upload-zone">
+            <div><strong>Click to upload</strong> or drop video file</div>
+            <input id="file-input" type="file" accept="video/*,.mp4,.mov,.webm,.mkv,.avi">
+          </div>
+          <div id="file-info" class="file-info"></div>
+
+          <div>
+            <label>Presets</label>
+            <div id="preset-list" class="preset-list"></div>
+          </div>
+
+          <label>
+            Fit Mode
+            <select id="fit-mode"></select>
+          </label>
+
+          <div class="row">
+            <label>
+              Speed
+              <input id="speed" type="number" value="1" step="0.01" min="0.25" max="100">
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input id="remove-audio" type="checkbox" checked>
+              Remove Audio
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Trim Start
+              <input id="trim-start" type="text" placeholder="0:05 or 5.0">
+            </label>
+            <label>
+              Trim End
+              <input id="trim-end" type="text" placeholder="1:30 or 90.0">
+            </label>
+          </div>
+
+          <label>
+            Cuts (one per line: start-end)
+            <textarea id="cuts" placeholder="8-15\n25-30"></textarea>
+          </label>
+
+          <div class="row">
+            <label>
+              CRF
+              <input id="crf" type="number" min="0" max="51" value="23">
+            </label>
+            <label>
+              Encode Preset
+              <select id="encode-preset"></select>
+            </label>
+          </div>
+
+          <div class="actions">
+            <button id="preview-btn" disabled>Preview Commands</button>
+            <button id="process-btn" class="secondary" disabled>Run Batch Export</button>
+          </div>
+
+          <div id="status" class="status"></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Batch Result</h2>
+        <div id="source-preview" class="source-preview">
+          <div class="head">Source Preview</div>
+          <video id="source-video" controls preload="metadata"></video>
+        </div>
+        <pre id="command" class="command"></pre>
+        <div id="outputs" class="outputs"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const fileInput = $("file-input");
+    const fileInfo = $("file-info");
+    const presetList = $("preset-list");
+    const fitMode = $("fit-mode");
+    const speedInput = $("speed");
+    const removeAudio = $("remove-audio");
+    const trimStart = $("trim-start");
+    const trimEnd = $("trim-end");
+    const cutsInput = $("cuts");
+    const crfInput = $("crf");
+    const encodePreset = $("encode-preset");
+    const previewBtn = $("preview-btn");
+    const processBtn = $("process-btn");
+    const statusEl = $("status");
+    const commandEl = $("command");
+    const outputsEl = $("outputs");
+    const sourcePreview = $("source-preview");
+    const sourceVideo = $("source-video");
+
+    let uploaded = null;
+
+    function setStatus(text, isError = false) {
+      statusEl.textContent = text;
+      statusEl.className = "status" + (isError ? " error" : "");
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes) return "0 B";
+      if (bytes < 1024) return bytes + " B";
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+      return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+    }
+
+    function parseCutsText() {
+      const result = [];
+      const lines = cutsInput.value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+      lines.forEach((line) => {
+        const pair = line.split("-");
+        if (pair.length === 2) result.push([pair[0].trim(), pair[1].trim()]);
+      });
+      return result;
+    }
+
+    function selectedPresets() {
+      const items = [];
+      presetList.querySelectorAll("input[type=checkbox]").forEach((cb) => {
+        if (cb.checked) items.push(cb.value);
+      });
+      return items;
+    }
+
+    function buildPayload() {
+      return {
+        input_file: uploaded.uploaded_name,
+        presets: selectedPresets(),
+        fit_mode: fitMode.value,
+        speed: parseFloat(speedInput.value) || 1,
+        cuts: parseCutsText(),
+        trim_start: trimStart.value.trim(),
+        trim_end: trimEnd.value.trim(),
+        remove_audio: removeAudio.checked,
+        crf: parseInt(crfInput.value, 10) || 23,
+        encode_preset: encodePreset.value,
+      };
+    }
+
+    async function loadOptions() {
+      try {
+        const resp = await fetch("api/options");
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Failed to load options");
+
+        const r = data.result;
+
+        presetList.innerHTML = "";
+        Object.keys(r.presets).forEach((name) => {
+          const dim = r.presets[name];
+          const row = document.createElement("label");
+          row.className = "preset-item";
+          row.innerHTML = `<input type="checkbox" value="${name}" checked> <strong>${name}</strong> (${dim.width}x${dim.height})`;
+          presetList.appendChild(row);
+        });
+
+        fitMode.innerHTML = "";
+        r.fit_modes.forEach((mode) => {
+          const opt = document.createElement("option");
+          opt.value = mode;
+          opt.textContent = mode;
+          if (mode === r.defaults.fit_mode) opt.selected = true;
+          fitMode.appendChild(opt);
+        });
+
+        encodePreset.innerHTML = "";
+        r.encoding_presets.forEach((p) => {
+          const opt = document.createElement("option");
+          opt.value = p;
+          opt.textContent = p;
+          if (p === r.defaults.encode_preset) opt.selected = true;
+          encodePreset.appendChild(opt);
+        });
+
+        speedInput.value = r.defaults.speed;
+        crfInput.value = r.defaults.crf;
+        removeAudio.checked = r.defaults.remove_audio;
+
+        setStatus("Ready. Upload a video to begin.");
+      } catch (err) {
+        setStatus(err.message || "Failed to load options", true);
+      }
+    }
+
+    async function upload(file) {
+      setStatus("Uploading " + file.name + "...");
+      const fd = new FormData();
+      fd.append("file", file);
+      sourcePreview.style.display = "none";
+      sourceVideo.removeAttribute("src");
+      sourceVideo.load();
+      outputsEl.innerHTML = "";
+
+      try {
+        const resp = await fetch("api/upload", { method: "POST", body: fd });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Upload failed");
+
+        uploaded = data.result;
+        fileInfo.style.display = "block";
+        fileInfo.textContent = `${uploaded.original_name} | ${formatBytes(uploaded.size_bytes || 0)} | ${uploaded.width || "?"}x${uploaded.height || "?"} | ${uploaded.duration ? uploaded.duration.toFixed(2) + "s" : "duration unknown"}`;
+
+        previewBtn.disabled = false;
+        processBtn.disabled = false;
+        if (uploaded.upload_url) {
+          sourceVideo.src = uploaded.upload_url + "?t=" + Date.now();
+          sourcePreview.style.display = "block";
+        }
+        setStatus("Upload complete.");
+      } catch (err) {
+        setStatus(err.message || "Upload failed", true);
+      }
+    }
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length > 0) {
+        upload(fileInput.files[0]);
+      }
+    });
+
+    previewBtn.addEventListener("click", async () => {
+      if (!uploaded) return;
+      setStatus("Generating command previews...");
+
+      try {
+        const resp = await fetch("api/preview-batch-command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Preview failed");
+
+        commandEl.style.display = "block";
+        commandEl.textContent = data.result.commands
+          .map((x) => `[${x.preset}] ${x.output_file}\n${x.command}`)
+          .join("\n\n");
+
+        setStatus("Preview generated.");
+      } catch (err) {
+        setStatus(err.message || "Preview failed", true);
+      }
+    });
+
+    processBtn.addEventListener("click", async () => {
+      if (!uploaded) return;
+      setStatus("Processing batch export...");
+      processBtn.disabled = true;
+      previewBtn.disabled = true;
+
+      try {
+        const resp = await fetch("api/process-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(buildPayload()),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || "Process failed");
+
+        const r = data.result;
+        outputsEl.innerHTML = "";
+        r.outputs.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "output-item";
+
+          const head = document.createElement("div");
+          head.className = "head";
+          head.innerHTML = `<span><strong>${item.preset}</strong> (${item.width}x${item.height}) - ${formatBytes(item.output_size_bytes)}</span>`;
+
+          const link = document.createElement("a");
+          link.className = "link";
+          link.href = item.output_url;
+          link.download = item.output_file;
+          link.textContent = "Download";
+          head.appendChild(link);
+          row.appendChild(head);
+
+          const video = document.createElement("video");
+          video.src = item.output_url + "?t=" + Date.now();
+          video.controls = true;
+          video.autoplay = false;
+          video.preload = "metadata";
+          row.appendChild(video);
+
+          outputsEl.appendChild(row);
+        });
+
+        commandEl.style.display = "block";
+        commandEl.textContent = r.outputs.map((x) => `[${x.preset}]\n${x.command}`).join("\n\n");
+
+        setStatus(`Done. Exported ${r.outputs.length} files.`);
+      } catch (err) {
+        setStatus(err.message || "Process failed", true);
+      } finally {
+        processBtn.disabled = false;
+        previewBtn.disabled = false;
+      }
+    });
+
+    loadOptions();
+  </script>
+</body>
+</html>

@@ -4,6 +4,8 @@ Generate brand logo assets (`icon`, `logo`, dark variants) via:
 
 1. Local HTTP UI (`web/index.html`)
 2. CLI one-shot mode
+3. Click generated images in the result gallery to view full-size previews
+4. Download generated files as a ZIP package from the result panel
 
 ## Run
 

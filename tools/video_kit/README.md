@@ -25,6 +25,7 @@ sudo apt install ffmpeg
 - **Compress** — adjust CRF quality and encoding preset
 - **Scale / resize** — 1080p, 720p, 480p, 50%, 25%
 - **Convert to GIF** — two-pass palette-optimized animated GIF with configurable FPS and width
+- **Result preview** — click GIF outputs in the result panel to open a larger preview
 - **Combinable** — multiple operations run in a single ffmpeg pass to avoid re-encoding
 - **Command preview** — see the exact ffmpeg command before running it
 

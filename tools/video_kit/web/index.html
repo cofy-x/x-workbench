@@ -363,6 +363,7 @@
       display: block;
       background: #000;
     }
+    .video-output img { cursor: zoom-in; }
 
     .download-link {
       display: inline-flex;
@@ -375,6 +376,48 @@
     }
 
     .download-link:hover { text-decoration: underline; }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(10, 16, 24, 0.84);
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+
+    .lightbox[hidden] { display: none; }
+
+    .lightbox img {
+      max-width: min(96vw, 1600px);
+      max-height: 88vh;
+      border-radius: 10px;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+      background: #0c1118;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 19px;
+      border: 0;
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 26px;
+      line-height: 1;
+      font-family: Arial, "PingFang SC", sans-serif;
+      cursor: pointer;
+    }
+
+    .lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
 
     .range-value {
       font-weight: 400;
@@ -528,6 +571,11 @@
     </section>
   </main>
 
+  <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview">
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close preview">&times;</button>
+    <img id="lightbox-image" alt="preview">
+  </div>
+
   <script>
     const $ = (sel) => document.getElementById(sel);
 
@@ -566,6 +614,9 @@
     const downloadLink = $("download-link");
     const outputMedia = $("output-media");
     const warnBanner = $("warn-banner");
+    const lightboxEl = $("lightbox");
+    const lightboxImage = $("lightbox-image");
+    const lightboxClose = $("lightbox-close");
 
     let uploadedFile = null;
     let speedSetByTarget = false;
@@ -587,11 +638,24 @@
       return m > 0 ? `${m}m ${s}s` : `${s}s`;
     }
 
+    function openLightbox(src, alt) {
+      lightboxImage.src = src;
+      lightboxImage.alt = alt || "preview";
+      lightboxEl.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeLightbox() {
+      lightboxEl.hidden = true;
+      lightboxImage.removeAttribute("src");
+      document.body.style.overflow = "";
+    }
+
     // -- Load options from server --
 
     async function loadOptions() {
       try {
-        const resp = await fetch("/api/options");
+        const resp = await fetch("api/options");
         const data = await resp.json();
 
         if (!data.ffmpeg_available) {
@@ -809,7 +873,7 @@
 
       const cuts = getCutValues();
       try {
-        const resp = await fetch("/api/calculate-speed", {
+        const resp = await fetch("api/calculate-speed", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -876,7 +940,7 @@
       fd.append("file", file);
 
       try {
-        const resp = await fetch("/api/upload", { method: "POST", body: fd });
+        const resp = await fetch("api/upload", { method: "POST", body: fd });
         const data = await resp.json();
         if (!data.ok) throw new Error(data.error);
 
@@ -935,7 +999,7 @@
       previewBtn.disabled = true;
 
       try {
-        const resp = await fetch("/api/preview-command", {
+        const resp = await fetch("api/preview-command", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(buildPayload()),
@@ -962,7 +1026,7 @@
       previewBtn.disabled = true;
 
       try {
-        const resp = await fetch("/api/process", {
+        const resp = await fetch("api/process", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(buildPayload()),
@@ -984,6 +1048,7 @@
           const img = document.createElement("img");
           img.src = r.output_url + "?t=" + Date.now();
           img.alt = r.output_file;
+          img.addEventListener("click", () => openLightbox(img.src, r.output_file));
           outputMedia.appendChild(img);
         } else {
           const vid = document.createElement("video");
@@ -1012,6 +1077,14 @@
         copyCmdBtn.textContent = "Copied!";
         setTimeout(() => { copyCmdBtn.textContent = orig; }, 1500);
       });
+    });
+
+    lightboxClose.addEventListener("click", closeLightbox);
+    lightboxEl.addEventListener("click", (event) => {
+      if (event.target === lightboxEl) closeLightbox();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !lightboxEl.hidden) closeLightbox();
     });
 
     // -- Init --
