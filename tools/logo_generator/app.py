@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import mimetypes
 import os
 import random
+import zipfile
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -417,7 +419,7 @@ def save_four_files(
 
 def path_to_url(path: Path) -> str:
     relative = path.resolve().relative_to(WORKSPACE_ROOT)
-    return "/" + relative.as_posix()
+    return relative.as_posix()
 
 
 def generate_assets(request: GenerationRequest) -> dict:
@@ -506,6 +508,36 @@ def parse_generation_payload(payload: dict) -> GenerationRequest:
     )
 
 
+def parse_zip_payload(payload: dict) -> tuple[list[Path], str]:
+    raw_files = payload.get("files")
+    if not isinstance(raw_files, list) or not raw_files:
+        raise ValueError("files must be a non-empty array")
+
+    generated_root = OUTPUT_ROOT.resolve()
+    files: list[Path] = []
+    seen: set[Path] = set()
+    for raw in raw_files:
+        rel = str(raw).strip()
+        if not rel:
+            continue
+        target = (WORKSPACE_ROOT / rel).resolve()
+        if generated_root not in target.parents:
+            raise ValueError("all files must be under generated/")
+        if not target.is_file():
+            raise ValueError(f"file not found: {rel}")
+        if target in seen:
+            continue
+        seen.add(target)
+        files.append(target)
+
+    if not files:
+        raise ValueError("no valid files provided")
+
+    archive_name_raw = str(payload.get("archive_name", "logo-assets")).strip()
+    archive_stem = slugify(Path(archive_name_raw).stem) or "logo-assets"
+    return files, f"{archive_stem}.zip"
+
+
 class DemoRequestHandler(BaseHTTPRequestHandler):
     server_version = "AvantDemoHTTP/1.0"
 
@@ -527,7 +559,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", guessed_type)
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
-        self.wfile.write(raw)
+        try:
+            self.wfile.write(raw)
+        except (ConnectionResetError, BrokenPipeError):
+            pass
 
     def _serve_generated(self, requested_path: str) -> None:
         relative = requested_path.lstrip("/")
@@ -537,6 +572,25 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.FORBIDDEN, "Path is outside generated directory")
             return
         self._serve_file(target)
+
+    def _read_json_body(self) -> dict:
+        content_length = int(self.headers.get("Content-Length", "0"))
+        payload_raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        return json.loads(payload_raw.decode("utf-8"))
+
+    def _serve_zip(self, files: list[Path], archive_name: str) -> None:
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for file_path in files:
+                zf.write(file_path, arcname=file_path.name)
+
+        data = buf.getvalue()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Disposition", f'attachment; filename="{archive_name}"')
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
@@ -568,17 +622,32 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         request_path = unquote(parsed.path)
-        if request_path != "/api/generate":
-            self.send_error(HTTPStatus.NOT_FOUND, "Unknown route")
+        if request_path == "/api/generate":
+            self._handle_generate()
             return
+        if request_path == "/api/download-zip":
+            self._handle_download_zip()
+            return
+        self.send_error(HTTPStatus.NOT_FOUND, "Unknown route")
 
+    def _handle_generate(self) -> None:
         try:
-            content_length = int(self.headers.get("Content-Length", "0"))
-            payload_raw = self.rfile.read(content_length) if content_length > 0 else b"{}"
-            payload = json.loads(payload_raw.decode("utf-8"))
+            payload = self._read_json_body()
             request = parse_generation_payload(payload)
             result = generate_assets(request)
             self._send_json({"ok": True, "result": result})
+        except json.JSONDecodeError:
+            self._send_json({"ok": False, "error": "Invalid JSON payload."}, status=HTTPStatus.BAD_REQUEST)
+        except ValueError as exc:
+            self._send_json({"ok": False, "error": str(exc)}, status=HTTPStatus.BAD_REQUEST)
+        except Exception as exc:  # pragma: no cover - defensive response
+            self._send_json({"ok": False, "error": f"Internal error: {exc}"}, status=HTTPStatus.INTERNAL_SERVER_ERROR)
+
+    def _handle_download_zip(self) -> None:
+        try:
+            payload = self._read_json_body()
+            files, archive_name = parse_zip_payload(payload)
+            self._serve_zip(files, archive_name)
         except json.JSONDecodeError:
             self._send_json({"ok": False, "error": "Invalid JSON payload."}, status=HTTPStatus.BAD_REQUEST)
         except ValueError as exc:

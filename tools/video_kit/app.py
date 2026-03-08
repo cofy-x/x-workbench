@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import uuid
 from dataclasses import dataclass, field
 from http import HTTPStatus
@@ -14,6 +15,21 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import unquote, urlparse
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from tools._shared.media_core import (
+    RangeCut,
+    cuts_to_keep_ranges as shared_cuts_to_keep_ranges,
+    discover_workspace_root as shared_discover_workspace_root,
+    format_command_display as shared_format_command_display,
+    has_executable as shared_has_executable,
+    parse_multipart_upload as shared_parse_multipart_upload,
+    parse_time as shared_parse_time,
+    probe_video as shared_probe_video,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -43,15 +59,7 @@ ENCODING_PRESETS = [
 # Paths
 # ---------------------------------------------------------------------------
 def discover_workspace_root() -> Path:
-    env_root = os.getenv("TOOLS_WORKSPACE_ROOT")
-    if env_root:
-        return Path(env_root).expanduser().resolve()
-
-    script_dir = Path(__file__).resolve().parent
-    for candidate in [script_dir, *script_dir.parents]:
-        if (candidate / "pyproject.toml").is_file():
-            return candidate
-    return Path.cwd().resolve()
+    return shared_discover_workspace_root()
 
 
 WORKSPACE_ROOT = discover_workspace_root()
@@ -66,17 +74,7 @@ INDEX_FILE = WEB_DIR / "index.html"
 # ---------------------------------------------------------------------------
 def _parse_time(t: str) -> float:
     """Parse a time string to seconds.  Accepts 5.0, 0:05, 1:30, 1:05:30."""
-    t = t.strip()
-    if not t:
-        return 0.0
-    parts = t.split(":")
-    if len(parts) == 1:
-        return float(parts[0])
-    if len(parts) == 2:
-        return int(parts[0]) * 60 + float(parts[1])
-    if len(parts) == 3:
-        return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-    raise ValueError(f"Invalid time format: {t}")
+    return shared_parse_time(t)
 
 
 def _cuts_to_keep_ranges(
@@ -86,83 +84,26 @@ def _cuts_to_keep_ranges(
     trim_end: float = 0,
 ) -> List[List[float]]:
     """Convert cut ranges to keep ranges within [trim_start, trim_end]."""
-    start = trim_start if trim_start > 0 else 0
-    end = trim_end if trim_end > 0 else total_duration
-    if end <= start:
-        return []
-
-    sorted_cuts = sorted(cuts, key=lambda c: c[0])
-    merged: List[List[float]] = []
-    for cs, ce in sorted_cuts:
-        cs, ce = max(cs, start), min(ce, end)
-        if cs >= ce:
-            continue
-        if merged and cs <= merged[-1][1]:
-            merged[-1][1] = max(merged[-1][1], ce)
-        else:
-            merged.append([cs, ce])
-
-    keep: List[List[float]] = []
-    pos = start
-    for cs, ce in merged:
-        if pos < cs:
-            keep.append([pos, cs])
-        pos = ce
-    if pos < end:
-        keep.append([pos, end])
-    return keep
+    normalized = [RangeCut(float(c[0]), float(c[1])) for c in cuts if len(c) == 2]
+    keep = shared_cuts_to_keep_ranges(
+        normalized,
+        total_duration=total_duration,
+        trim_start=trim_start,
+        trim_end=trim_end,
+    )
+    return [[item.start, item.end] for item in keep]
 
 
 # ---------------------------------------------------------------------------
 # External tool helpers
 # ---------------------------------------------------------------------------
 def _has_executable(name: str) -> bool:
-    return shutil.which(name) is not None
+    return shared_has_executable(name)
 
 
 def probe_video(file_path: Path) -> Dict[str, Any]:
     """Return video metadata via ffprobe."""
-    if not _has_executable("ffprobe"):
-        raise RuntimeError("ffprobe not found in PATH")
-
-    result = subprocess.run(
-        [
-            "ffprobe", "-v", "quiet",
-            "-print_format", "json",
-            "-show_format", "-show_streams",
-            str(file_path),
-        ],
-        capture_output=True, text=True, timeout=30,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"ffprobe failed: {result.stderr.strip()}")
-
-    data = json.loads(result.stdout)
-    video_stream = next(
-        (s for s in data.get("streams", []) if s.get("codec_type") == "video"), None
-    )
-    audio_stream = next(
-        (s for s in data.get("streams", []) if s.get("codec_type") == "audio"), None
-    )
-    fmt = data.get("format", {})
-
-    info: Dict[str, Any] = {
-        "filename": file_path.name,
-        "size_bytes": int(fmt.get("size", 0)),
-        "duration": float(fmt.get("duration", 0)),
-        "format_name": fmt.get("format_name", ""),
-    }
-    if video_stream:
-        info["width"] = int(video_stream.get("width", 0))
-        info["height"] = int(video_stream.get("height", 0))
-        info["codec"] = video_stream.get("codec_name", "")
-        fps_parts = video_stream.get("r_frame_rate", "0/1").split("/")
-        if len(fps_parts) == 2 and int(fps_parts[1]) > 0:
-            info["fps"] = round(int(fps_parts[0]) / int(fps_parts[1]), 2)
-        else:
-            info["fps"] = 0
-    info["has_audio"] = audio_stream is not None
-    return info
+    return shared_probe_video(file_path).to_dict()
 
 
 # ---------------------------------------------------------------------------
@@ -466,13 +407,7 @@ def _format_single_cmd(cmd: List[str]) -> str:
 
 
 def format_command_display(cmd: List[str] | List[List[str]]) -> str:
-    if cmd and isinstance(cmd[0], list):
-        parts = [
-            f"# Pass {i + 1}\n{_format_single_cmd(c)}"
-            for i, c in enumerate(cmd)
-        ]
-        return "\n\n".join(parts)
-    return _format_single_cmd(cmd)  # type: ignore[arg-type]
+    return shared_format_command_display(cmd)
 
 
 # ---------------------------------------------------------------------------
@@ -588,7 +523,7 @@ def process_video(request: ProcessingRequest) -> Dict[str, Any]:
     return {
         "command": command_display,
         "output_file": output_name,
-        "output_url": "/" + relative.as_posix(),
+        "output_url": relative.as_posix(),
         "output_size_bytes": output_path.stat().st_size if output_path.exists() else 0,
     }
 
@@ -647,46 +582,7 @@ def preview_command(request: ProcessingRequest) -> Dict[str, Any]:
 # Multipart upload parser (stdlib-only, cgi removed in 3.13)
 # ---------------------------------------------------------------------------
 def parse_multipart_upload(headers: Any, rfile: Any) -> tuple[str, bytes]:
-    content_type = headers.get("Content-Type", "")
-    if "multipart/form-data" not in content_type:
-        raise ValueError("Expected multipart/form-data")
-
-    boundary = None
-    for segment in content_type.split(";"):
-        segment = segment.strip()
-        if segment.startswith("boundary="):
-            boundary = segment[len("boundary="):]
-            break
-    if not boundary:
-        raise ValueError("Missing boundary in Content-Type")
-
-    content_length = int(headers.get("Content-Length", 0))
-    if content_length > MAX_UPLOAD_BYTES:
-        raise ValueError(
-            f"File too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB)"
-        )
-    if content_length <= 0:
-        raise ValueError("Empty upload")
-
-    body = rfile.read(content_length)
-    boundary_bytes = f"--{boundary}".encode()
-
-    for part in body.split(boundary_bytes):
-        if b"Content-Disposition" not in part:
-            continue
-        hdr_end = part.find(b"\r\n\r\n")
-        if hdr_end < 0:
-            continue
-        hdr_text = part[:hdr_end].decode("utf-8", errors="replace")
-        file_data = part[hdr_end + 4 :]
-        if file_data.endswith(b"\r\n"):
-            file_data = file_data[:-2]
-
-        match = re.search(r'filename="([^"]+)"', hdr_text)
-        if match and file_data:
-            return Path(match.group(1)).name, file_data
-
-    raise ValueError("No file found in upload")
+    return shared_parse_multipart_upload(headers, rfile, MAX_UPLOAD_BYTES)
 
 
 # ---------------------------------------------------------------------------
@@ -773,7 +669,10 @@ class VideoKitHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
             self.send_header("Accept-Ranges", "bytes")
             self.end_headers()
-            self.wfile.write(data)
+            try:
+                self.wfile.write(data)
+            except (ConnectionResetError, BrokenPipeError):
+                pass
         else:
             raw = file_path.read_bytes()
             self.send_response(HTTPStatus.OK)
@@ -781,7 +680,10 @@ class VideoKitHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(raw)))
             self.send_header("Accept-Ranges", "bytes")
             self.end_headers()
-            self.wfile.write(raw)
+            try:
+                self.wfile.write(raw)
+            except (ConnectionResetError, BrokenPipeError):
+                pass
 
     def _serve_under(self, url_path: str, allowed_root: Path) -> None:
         relative = url_path.lstrip("/")

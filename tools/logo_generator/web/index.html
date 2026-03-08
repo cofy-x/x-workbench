@@ -118,14 +118,30 @@
       color: var(--muted);
     }
 
+    .result-head {
+      margin: 0 0 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
     .output-path {
-      margin: 0 0 16px;
+      margin: 0;
       padding: 10px 12px;
       border: 1px dashed var(--line);
       border-radius: 10px;
       font-size: 13px;
       color: var(--muted);
       overflow-wrap: anywhere;
+    }
+
+    .result-head button {
+      justify-self: end;
+      padding: 8px 12px;
+      font-size: 13px;
+      background: #3f4a5d;
+      white-space: nowrap;
     }
 
     .gallery {
@@ -171,11 +187,66 @@
       max-width: 100%;
       height: auto;
       display: block;
+      cursor: zoom-in;
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background: rgba(10, 16, 24, 0.84);
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+
+    .lightbox[hidden] {
+      display: none;
+    }
+
+    .lightbox img {
+      max-width: min(96vw, 1600px);
+      max-height: 88vh;
+      border-radius: 10px;
+      background: #0d1117;
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 16px;
+      right: 18px;
+      width: 38px;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border-radius: 19px;
+      border: 0;
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-size: 26px;
+      line-height: 1;
+      font-family: Arial, "PingFang SC", sans-serif;
+      cursor: pointer;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     @media (max-width: 980px) {
       .layout {
         grid-template-columns: 1fr;
+      }
+
+      .result-head {
+        grid-template-columns: 1fr;
+      }
+
+      .result-head button {
+        justify-self: end;
       }
     }
   </style>
@@ -226,21 +297,34 @@
       </article>
 
       <article class="panel">
-        <p id="output_dir" class="output-path">Output Directory: Not generated yet</p>
+        <div class="result-head">
+          <p id="output_dir" class="output-path">Output Directory: Not generated yet</p>
+          <button id="download-zip-btn" type="button" disabled>Download ZIP</button>
+        </div>
         <div id="gallery" class="gallery"></div>
       </article>
     </section>
   </main>
+
+  <div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview">
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Close preview">&times;</button>
+    <img id="lightbox-image" alt="preview">
+  </div>
 
   <script>
     const form = document.getElementById("config-form");
     const statusEl = document.getElementById("status");
     const outputDirEl = document.getElementById("output_dir");
     const galleryEl = document.getElementById("gallery");
+    const downloadZipBtn = document.getElementById("download-zip-btn");
     const submitBtn = document.getElementById("submit-btn");
     const variantSelect = document.getElementById("default_variant");
     const iconModeSelect = document.getElementById("icon_mode");
     const randomSeedInput = document.getElementById("random_seed");
+    const lightboxEl = document.getElementById("lightbox");
+    const lightboxImage = document.getElementById("lightbox-image");
+    const lightboxClose = document.getElementById("lightbox-close");
+    let latestResult = null;
 
     const iconModeLabels = {
       static_variant: "Static Variant (does not change by brand)",
@@ -251,6 +335,19 @@
     function setStatus(text, isError = false) {
       statusEl.textContent = text;
       statusEl.style.color = isError ? "#d1242f" : "#5a6472";
+    }
+
+    function openLightbox(src, alt) {
+      lightboxImage.src = src;
+      lightboxImage.alt = alt || "preview";
+      lightboxEl.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeLightbox() {
+      lightboxEl.hidden = true;
+      lightboxImage.removeAttribute("src");
+      document.body.style.overflow = "";
     }
 
     function createImageCard(file) {
@@ -268,6 +365,7 @@
       img.alt = file.name;
       img.src = `${file.url}?t=${Date.now()}`;
       img.loading = "lazy";
+      img.addEventListener("click", () => openLightbox(img.src, file.name));
 
       body.appendChild(img);
       card.appendChild(head);
@@ -276,11 +374,13 @@
     }
 
     function renderResult(result) {
+      latestResult = result;
       outputDirEl.textContent = `Output Directory: ${result.output_dir}`;
       galleryEl.innerHTML = "";
       result.files.forEach((file) => {
         galleryEl.appendChild(createImageCard(file));
       });
+      downloadZipBtn.disabled = result.files.length === 0;
     }
 
     function syncSeedInputState() {
@@ -297,7 +397,7 @@
     async function loadOptions() {
       setStatus("Loading configuration...");
       try {
-        const response = await fetch("/api/options");
+        const response = await fetch("api/options");
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || "Failed to load configuration");
@@ -338,6 +438,7 @@
       event.preventDefault();
       setStatus("Generating images, please wait...");
       submitBtn.disabled = true;
+      downloadZipBtn.disabled = true;
 
       const payload = {
         brand_name: document.getElementById("brand_name").value.trim(),
@@ -349,7 +450,7 @@
       };
 
       try {
-        const response = await fetch("/api/generate", {
+        const response = await fetch("api/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -364,10 +465,64 @@
         setStatus(error.message || "Generation failed.", true);
       } finally {
         submitBtn.disabled = false;
+        downloadZipBtn.disabled = !latestResult || !latestResult.files || latestResult.files.length === 0;
       }
     });
 
     iconModeSelect.addEventListener("change", syncSeedInputState);
+    downloadZipBtn.addEventListener("click", async () => {
+      if (!latestResult || !latestResult.files || latestResult.files.length === 0) return;
+
+      const originalText = downloadZipBtn.textContent;
+      const archiveBaseName = `${latestResult.brand_slug || "logo-assets"}-logos`;
+      downloadZipBtn.disabled = true;
+      downloadZipBtn.textContent = "Packaging...";
+      setStatus("Preparing ZIP package...");
+
+      try {
+        const response = await fetch("api/download-zip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            archive_name: archiveBaseName,
+            files: latestResult.files.map((file) => file.relative_path)
+          })
+        });
+
+        if (!response.ok) {
+          let errorMessage = "Failed to build ZIP package";
+          const contentType = response.headers.get("content-type") || "";
+          if (contentType.includes("application/json")) {
+            const data = await response.json();
+            errorMessage = data.error || errorMessage;
+          }
+          throw new Error(errorMessage);
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.download = `${archiveBaseName}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(blobUrl);
+        setStatus(`ZIP download started (${latestResult.files.length} files).`);
+      } catch (error) {
+        setStatus(error.message || "ZIP download failed.", true);
+      } finally {
+        downloadZipBtn.disabled = false;
+        downloadZipBtn.textContent = originalText;
+      }
+    });
+    lightboxClose.addEventListener("click", closeLightbox);
+    lightboxEl.addEventListener("click", (event) => {
+      if (event.target === lightboxEl) closeLightbox();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !lightboxEl.hidden) closeLightbox();
+    });
 
     loadOptions();
   </script>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>x-workbench gateway</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #101418;
+      --muted: #5a6472;
+      --line: #d8dee6;
+      --brand: #1f6feb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top right, #ecf3ff, var(--bg) 55%);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 920px;
+      margin: 28px auto 48px;
+      padding: 0 20px;
+    }
+    h1 { margin: 0; font-size: 30px; }
+    p { color: var(--muted); font-size: 15px; }
+    .panel {
+      margin-top: 20px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(16, 20, 24, 0.06);
+    }
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+    li {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+    }
+    a {
+      color: var(--brand);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    a:hover { text-decoration: underline; }
+    span {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>x-workbench tools</h1>
+    <p>Select a tool route below. All requests are served through Nginx under <code>/tools/&lt;name&gt;/</code>.</p>
+    <section class="panel">
+      <ul>
+__TOOL_ITEMS__
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

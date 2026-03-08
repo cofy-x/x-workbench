@@ -1,0 +1,44 @@
+worker_processes auto;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 65;
+
+    client_max_body_size 1024m;
+    proxy_read_timeout 3600s;
+    proxy_send_timeout 3600s;
+
+    access_log /dev/stdout;
+    error_log /dev/stderr warn;
+
+    server {
+        listen 8080;
+        server_name _;
+
+        location = /healthz {
+            add_header Content-Type text/plain;
+            return 200 "ok\n";
+        }
+
+        location = / {
+            root __LANDING_ROOT__;
+            try_files /index.html =404;
+        }
+
+        location /generated/ {
+            alias /app/generated/;
+            autoindex off;
+            add_header Cache-Control "no-cache, must-revalidate";
+        }
+
+__TOOL_ROUTES__
+    }
+}

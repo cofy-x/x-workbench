@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -32,3 +36,75 @@ jobs:
 
       - name: Run smoke generation
         run: make generate TOOL=logo_generator BRAND=ci-smoke
+
+      - name: Run CLI smoke for new tools
+        run: |
+          uv run python tools/subtitle_studio/app.py --help
+          uv run python tools/multi_format_exporter/app.py --help
+          uv run python tools/storyboard_builder/app.py --help
+
+      - name: Build Docker image
+        run: docker build -t x-workbench:ci .
+
+      - name: Docker gateway smoke
+        run: |
+          set -euo pipefail
+          docker rm -f x-workbench-ci >/dev/null 2>&1 || true
+          docker run -d --name x-workbench-ci -p 18080:8080 x-workbench:ci
+          trap 'docker rm -f x-workbench-ci >/dev/null 2>&1 || true' EXIT
+
+          wait_url() {
+            local url="$1"
+            for i in $(seq 1 40); do
+              if curl -fsS "$url" >/dev/null; then
+                return 0
+              fi
+              sleep 1
+            done
+            echo "Timed out waiting for $url" >&2
+            return 1
+          }
+
+          wait_url http://127.0.0.1:18080/healthz
+          wait_url http://127.0.0.1:18080/tools/logo_generator/api/options
+          wait_url http://127.0.0.1:18080/tools/video_kit/api/options
+
+          curl -fsS http://127.0.0.1:18080/healthz
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix={{branch}}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
