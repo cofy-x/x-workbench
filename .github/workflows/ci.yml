@@ -42,6 +42,7 @@ jobs:
           uv run python tools/subtitle_studio/app.py --help
           uv run python tools/multi_format_exporter/app.py --help
           uv run python tools/storyboard_builder/app.py --help
+          uv run python tools/workbench_topology/app.py --help
 
       - name: Build Docker image
         run: docker build -t x-workbench:ci .
@@ -68,6 +69,7 @@ jobs:
           wait_url http://127.0.0.1:18080/healthz
           wait_url http://127.0.0.1:18080/tools/logo_generator/api/options
           wait_url http://127.0.0.1:18080/tools/video_kit/api/options
+          wait_url http://127.0.0.1:18080/tools/workbench_topology/
 
           curl -fsS http://127.0.0.1:18080/healthz
 

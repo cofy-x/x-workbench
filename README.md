@@ -54,6 +54,7 @@ make serve TOOL=video_kit
 | **[subtitle_studio](tools/subtitle_studio/README.md)** | Speech-to-subtitle transcription | Auto-generate and burn-in subtitles using Whisper |
 | **[storyboard_builder](tools/storyboard_builder/README.md)** | Video frame extraction | Create contact sheets and timeline summaries |
 | **[logo_generator](tools/logo_generator/README.md)** | Brand logo generation | Generate icon and logo variants for light/dark modes |
+| **[workbench_topology](tools/workbench_topology/README.md)** | Streamlit + Graphviz topology editor | Visualize and edit gateway, tool, and output relationships |
 
 ## Usage Examples
 
@@ -81,6 +82,13 @@ uv run python tools/multi_format_exporter/app.py --process -i video.mp4 \
 # Auto-transcribe and burn-in subtitles
 uv run python tools/subtitle_studio/app.py --process -i video.mp4 \
   --lang auto --model small --burn-in --style clean
+```
+
+### Workbench Topology — Visualize tool relationships
+
+```bash
+# Launch Streamlit topology editor
+make serve TOOL=workbench_topology
 ```
 
 See individual tool READMEs for complete documentation.
@@ -168,13 +176,16 @@ docker restart x-workbench
 - Python >= 3.13
 - [uv](https://docs.astral.sh/uv/) for dependency management
 - [ffmpeg](https://ffmpeg.org/) for video tools
+- [Graphviz](https://graphviz.org/) binaries for topology rendering
 
 ```bash
 # macOS
 brew install ffmpeg
+brew install graphviz
 
 # Ubuntu/Debian
 sudo apt install ffmpeg
+sudo apt install graphviz
 ```
 
 ### Setup
@@ -201,8 +212,8 @@ make serve TOOL=video_kit
 x-workbench/
 ├── tools/                    # All tools live here
 │   ├── <tool_name>/
-│   │   ├── app.py           # Python server (Flask-like)
-│   │   ├── web/index.html   # Static web UI
+│   │   ├── app.py           # Python service entrypoint
+│   │   ├── web/index.html   # Tool web assets (or placeholder)
 │   │   └── README.md        # Tool-specific docs
 │   └── _shared/             # Shared utilities
 ├── docker/                   # Docker configuration
